@@ -1,4 +1,4 @@
-import db
+import db_old as db
 
 class Production:
 	def __init__(self, country_id, production_type, production, year, month):

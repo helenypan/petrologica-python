@@ -30,7 +30,7 @@ for row in cell_range: # This is iterating through rows 1-7
         else:
             cur_prod = int(cell.value)  
             year =  prod_counter / 12 + year_start
-            month =   prod_counter % 12 + 1 ;
+            month =   prod_counter % 12 + 1 
             if cur_prod > 0 :
                 prod_obj = production.Production(country_id,production_type,cur_prod,year, month )
                 prod_obj.save_to_db()
