@@ -1,5 +1,5 @@
 import sys
-sys.path.append('../')
+sys.path.append('../includes')
 
 from db import DB
 import re
