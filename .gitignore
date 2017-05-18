@@ -2,3 +2,4 @@
 *.xls
 *.pyc
 *.csv
+wells/url_info.py
