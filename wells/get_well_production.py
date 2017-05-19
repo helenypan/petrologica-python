@@ -1,97 +1,71 @@
 import sys
 sys.path.append('../includes')
 from db import DB
-from datetime import datetime
+import requests
+import url_info
 from bs4 import BeautifulSoup
-import urllib.request
-import ssl
-import re
-context = ssl._create_unverified_context()
-url_to_complete = "https://uk.finance.yahoo.com/quote/{}/history?interval=1wk&filter=history&frequency=1wk"
-url_ftse = "https://uk.investing.com/indices/uk-100-historical-data"
+from datetime import datetime
 
 db = DB()
 conn = db.conn
 cur = db.cur
 
-def extract_ftse_data(url, dates):
-	print(dates)
-	req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-	# html = urlopen(req,, context = context).read()
-	with urllib.request.urlopen(req, context = context) as url_file:
-		html = str(url_file.read())
-		html_list = re.split("<html |</html>",html)
-		html_to_parse = "<html " + html_list[1] + "</html>"
-		# print(html_to_parse)
-		soup = BeautifulSoup(html_to_parse,'html.parser')
-		tbl_list = soup.find_all("table")
-	for tbl in tbl_list:
-		tbl_id = tbl.get("id")
-		if tbl_id == "curr_table":
-			rows = tbl.find_all("tr")
-			counter = 0
-			for row in rows:
-				if counter >0 and counter <15:
-					cells = row.find_all("td")
-					dt_text = cells[0].getText()
-					index_data = cells[1].getText()
-					index_val = float(re.sub(',', '', index_data))
-					dt = str(datetime.strptime(dt_text,"%b %d, %Y")).split()[0]
-					if dt in dates:
-						save_to_db("FTSE100",dt, index_val)
-				counter = counter + 1
-	conn.commit()
+def get_well_data(file_number):
+	post_params = {
+		"FileNumber" : file_number
+	}
+	resp = requests.post(url_info.well_prod_url,data=post_params,auth=(url_info.username, url_info.password)).content
+	soup = BeautifulSoup(resp,'html.parser')
 
-
-def save_to_db(company_code, dt, val):
-	cur.execute('''insert ignore into 
-		tomorrow_external_data.index_data(company_code, date, value) 
-		VALUES(%s,%s,%s)''',(company_code, dt, val))
-	print("New record saved:",(company_code, dt, val))
-
-def extract_company_prices(url):
-	dt_list = list()
-	with urllib.request.urlopen(url, context=context) as url_file:
-		html = url_file.read()
-		soup = BeautifulSoup(html, "html.parser")
-		tbl_list = soup.find_all('table')
-	for tbl in tbl_list:
-		data_test_lbl = tbl.get("data-test")
-		if data_test_lbl == "historical-prices":
-			#found the data
-			rows = tbl.find_all("tr")
-			counter = 0
-			for row in rows:
-				if counter >0 and counter < 3:
-					cells = row.find_all("td")
-					dt_text = cells[0].getText()
-					close_val = float(cells[4].getText())
-					dt = str(datetime.strptime(dt_text,"%d %b %Y")).split()[0]
-					if dt not in dt_list:
-						dt_list.append(dt)
-					save_to_db(company_code,dt, close_val)
-				counter = counter + 1
-	conn.commit()
-	return dt_list
-
-
-company_codes = list()
-dates_to_extract = None
-cur.execute('''select company_code from 
-	tomorrow_external_data.index_company order by company_code''')
-for row in cur.fetchall():
-	company_codes.append(row[0])
-
-for company_code in company_codes:
-	url = url_to_complete.format(company_code)
-	if dates_to_extract is None:
-		dates_to_extract = extract_company_prices(url)
+	tbl_summary = soup.find("table",{"summary":"Well data content table"})
+	if tbl_summary:
+		summary = tbl_summary.find("tr").find("div")
+		year = datetime.today().year
+		month = datetime.today().month
+		cur.execute('''
+			insert ignore into tomorrow_wells_new.well_monthly_summary(FileNo, Year, Month, Summary)
+			values(%s, %s,%s, %s)''',(file_number,year, month, summary))
+		print("Monthly summary saved for FileNo:",file_number)
 	else:
-		extract_company_prices(url)
-# now need to extract ftse100 data of the dates in dates_to_extract
-extract_ftse_data(url_ftse,dates_to_extract)
+		print("No summary available for FileNo:",file_number)
+
+	tbl_prod = soup.find("table",{"id":"largeTableOutput"})
+	if tbl_prod:
+		rows = tbl_prod.find_all("tr")
+		has_production_to_save = False
+		for tr in rows:
+			cells = tr.find_all("td")
+			pool = cells[0].get_text()
+			if pool != "Pool":
+				dt = cells[1].get_text()
+				year = int(dt.split("-")[1])
+				month = int(dt.split("-")[0])
+				if year >= 2005:
+					prod_tuple = (file_number,pool, dt, year, month,\
+						cells[2].get_text(),cells[3].get_text(),cells[4].get_text(),cells[5].get_text(),\
+						cells[6].get_text(),cells[7].get_text(),cells[8].get_text() )
+					cur.execute('''
+						insert ignore into tomorrow_wells_new.well_production(FileNo,Pool,Date,Year, Month,
+						Days, BBLSOil, Runs, BBLSWater, MCFProd,MCFSold, VentFlare) values
+						(%s, %s,%s, %s,%s, %s,%s,%s, %s,%s, %s,%s)''',prod_tuple)
+					has_production_to_save = True
+		if has_production_to_save:
+			print("Production saved for FileNo:",file_number)
+		else:
+			print("No Production after 2005 to be saved for FileNo:",file_number)
+	else:
+		print("No production data avaialbe for FileNo:",file_number)
+
+	print("\n")
+	conn.commit()
+
+
+# get_well_data(30890)
+
+cur.execute('''select FileNo from tomorrow_wells_new.well_index where FileNo not in 
+	(select FileNo from tomorrow_wells_new.well_monthly_summary where Year=YEAR(CURDATE()) and Month = MONTH(CURDATE()))
+	order by FileNo''')
+for row in cur.fetchall():
+	file_number = row[0]
+	get_well_data(file_number)
 cur.close()
-
-
-
-
