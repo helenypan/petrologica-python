@@ -2,9 +2,19 @@ import sys
 sys.path.append('../includes')
 from db import DB
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.poolmanager import PoolManager
+import ssl
 import url_info
 from bs4 import BeautifulSoup
 from datetime import datetime
+
+class MyAdapter(HTTPAdapter):
+	def init_poolmanager(self, connections, maxsize, block=False):
+		self.poolmanager = PoolManager(num_pools=connections,
+										maxsize=maxsize,
+										block=block,
+										ssl_version=ssl.PROTOCOL_TLSv1)
 
 db = DB()
 conn = db.conn
@@ -14,7 +24,9 @@ def get_well_data(file_number):
 	post_params = {
 		"FileNumber" : file_number
 	}
-	resp = requests.post(url_info.well_prod_url,data=post_params,auth=(url_info.username, url_info.password)).content
+	s = requests.Session()
+	s.mount("https://", MyAdapter())
+	resp = s.post(url_info.well_prod_url,data=post_params,auth=(url_info.username, url_info.password)).content
 	soup = BeautifulSoup(resp,'html.parser')
 
 	tbl_summary = soup.find("table",{"summary":"Well data content table"})
