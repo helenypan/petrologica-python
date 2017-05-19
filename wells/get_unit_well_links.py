@@ -1,97 +1,49 @@
 import sys
 sys.path.append('../includes')
 from db import DB
-from datetime import datetime
+import requests
+import url_info
 from bs4 import BeautifulSoup
-import urllib.request
-import ssl
-import re
-context = ssl._create_unverified_context()
-url_to_complete = "https://uk.finance.yahoo.com/quote/{}/history?interval=1wk&filter=history&frequency=1wk"
-url_ftse = "https://uk.investing.com/indices/uk-100-historical-data"
 
 db = DB()
 conn = db.conn
 cur = db.cur
 
-def extract_ftse_data(url, dates):
-	print(dates)
-	req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-	# html = urlopen(req,, context = context).read()
-	with urllib.request.urlopen(req, context = context) as url_file:
-		html = str(url_file.read())
-		html_list = re.split("<html |</html>",html)
-		html_to_parse = "<html " + html_list[1] + "</html>"
-		# print(html_to_parse)
-		soup = BeautifulSoup(html_to_parse,'html.parser')
-		tbl_list = soup.find_all("table")
-	for tbl in tbl_list:
-		tbl_id = tbl.get("id")
-		if tbl_id == "curr_table":
-			rows = tbl.find_all("tr")
-			counter = 0
-			for row in rows:
-				if counter >0 and counter <15:
-					cells = row.find_all("td")
-					dt_text = cells[0].getText()
-					index_data = cells[1].getText()
-					index_val = float(re.sub(',', '', index_data))
-					dt = str(datetime.strptime(dt_text,"%b %d, %Y")).split()[0]
-					if dt in dates:
-						save_to_db("FTSE100",dt, index_val)
-				counter = counter + 1
-	conn.commit()
+def get_unit_well_link(unit):
+	unit_id = unit[0]
+	unit_name = unit[1]
+	post_params = {
+		"menu1" : "Unit",
+		"menu3" : unit_name,
+		"menu4" : "1/1971",
+		"PrevU" : unit_name
+	}
+	resp = requests.post(url_info.unit_well_link_url,data=post_params,auth=(url_info.username, url_info.password)).content
+	soup = BeautifulSoup(resp,'html.parser')
+	tbl = soup.find_all("table")[1]
+	rows = tbl.find_all("tr")
+	for tr in rows:
+		td = tr.find_all("td")[0]
+		file_number = td.get_text()
+		save_unit_well_link(unit_id, file_number)
+
+def save_unit_well_link(unit_id, file_number):
+	cur.execute('''
+		insert ignore into tomorrow_wells_new.unit_well_links(UnitID, FileNo) values(%s, %s)
+		''',(unit_id,file_number ))
+	print("Record saved:",unit_id, file_number)
 
 
-def save_to_db(company_code, dt, val):
-	cur.execute('''insert ignore into 
-		tomorrow_external_data.index_data(company_code, date, value) 
-		VALUES(%s,%s,%s)''',(company_code, dt, val))
-	print("New record saved:",(company_code, dt, val))
 
-def extract_company_prices(url):
-	dt_list = list()
-	with urllib.request.urlopen(url, context=context) as url_file:
-		html = url_file.read()
-		soup = BeautifulSoup(html, "html.parser")
-		tbl_list = soup.find_all('table')
-	for tbl in tbl_list:
-		data_test_lbl = tbl.get("data-test")
-		if data_test_lbl == "historical-prices":
-			#found the data
-			rows = tbl.find_all("tr")
-			counter = 0
-			for row in rows:
-				if counter >0 and counter < 3:
-					cells = row.find_all("td")
-					dt_text = cells[0].getText()
-					close_val = float(cells[4].getText())
-					dt = str(datetime.strptime(dt_text,"%d %b %Y")).split()[0]
-					if dt not in dt_list:
-						dt_list.append(dt)
-					save_to_db(company_code,dt, close_val)
-				counter = counter + 1
-	conn.commit()
-	return dt_list
-
-
-company_codes = list()
-dates_to_extract = None
-cur.execute('''select company_code from 
-	tomorrow_external_data.index_company order by company_code''')
+cur.execute('''
+	select ID, UnitName from tomorrow_wells_new.units order by UnitName
+	''')
+counter = 0
 for row in cur.fetchall():
-	company_codes.append(row[0])
+	counter += 1
+	get_unit_well_link(row)
+	if counter % 50 ==0:
+		conn.commit()
+conn.commit()
 
-for company_code in company_codes:
-	url = url_to_complete.format(company_code)
-	if dates_to_extract is None:
-		dates_to_extract = extract_company_prices(url)
-	else:
-		extract_company_prices(url)
-# now need to extract ftse100 data of the dates in dates_to_extract
-extract_ftse_data(url_ftse,dates_to_extract)
-cur.close()
-
-
-
-
+		
