@@ -26,6 +26,12 @@ class DB:
 			VALUES(%s,%s,%s)''',record)
 		print("New record saved:",record)
 
+	def save_currency(self, currency, record):
+		self.cur.execute('''insert ignore into 
+			tomorrow_external_data.currency(date,{}) 
+			VALUES(%s,%s)'''.format(currency),record)
+		print("New record saved:",currency, record)
+
 	def save_company_prices(self,record):
 		self.cur.execute('''insert ignore into 
 			tomorrow_external_data.company_prices(company_code, date, open, close, volume) 
