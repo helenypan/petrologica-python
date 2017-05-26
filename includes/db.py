@@ -19,3 +19,22 @@ class DB:
     	db=self.db
 		)
 		self.cur = self.conn.cursor()
+
+	def save_index_prices(self, record):
+		self.cur.execute('''insert ignore into 
+			tomorrow_external_data.index_prices(index_name, date, price) 
+			VALUES(%s,%s,%s)''',record)
+		print("New record saved:",record)
+
+	def save_company_prices(self,record):
+		self.cur.execute('''insert ignore into 
+			tomorrow_external_data.company_prices(company_code, date, open, close, volume) 
+			VALUES(%s,%s,%s,%s,%s)''',record)
+		print("New record saved:",record)
+
+	def close_connection(self):
+		self.cur.close()
+
+	def exe_commit(self):
+		self.conn.commit()
+
