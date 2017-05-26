@@ -36,14 +36,15 @@ def extract_company_current_prices(company_code):
 		parse_company_prices(company_code,html, db)
 
 
-db.cur.execute('''select company_code from 
-	tomorrow_external_data.index_company''')
+
+db.cur.execute('''select company_code from tomorrow_external_data.index_company;''')
 for row in db.cur:
 	company_code = row[0]
 	extract_company_current_prices(company_code)
 		
-# # now need to extract ftse100 data 
+# extract ftse100 data 
 extract_ftse_current_data(url_ftse_current)
+# retrieve eur_nok currency data
 extract_currency_current_data(url_currency_current,"EUR_NOK" )
 db.close_connection()
 

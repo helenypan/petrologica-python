@@ -91,8 +91,7 @@ SideBlockUser=a%3A2%3A%7Bs%3A10%3A%22stack_size%22%3Ba%3A1%3A%7Bs%3A11%3A%22last
 
 
 
-db.cur.execute('''select company_code from 
-	tomorrow_external_data.index_company''')
+db.cur.execute('''select company_code from tomorrow_external_data.index_company; ''')
 for row in db.cur:
 	company_code = row[0]
 	t0 = datetime.datetime(2010, 1, 1)
@@ -102,7 +101,8 @@ for row in db.cur:
 		t0 = t1
 		t1 = get_date_after(t0, month_gap)
 		
-# # now need to extract ftse100 data of the dates in dates_to_extract
+# retrieve ftse 100 data
 extract_ftse_history_data(url_ftse_history)
+# retrieve eur_nok currency data
 extrace_currency_history_data(url_currency_history, "EUR_NOK")
 db.close_connection()
