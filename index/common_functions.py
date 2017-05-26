@@ -23,8 +23,8 @@ def parse_company_prices(company_code, html,db):
 				if len(cells)== 7:
 					dt_text = cells[0].getText()
 					dt = str(datetime.datetime.strptime(dt_text,"%d %b %Y")).split()[0]
-					open_val = float(cells[1].getText())
-					close_val = float(cells[4].getText())
+					open_val = float( re.sub(r'[,-]', '', cells[1].getText()))
+					close_val = float( re.sub(r'[,-]', '', cells[4].getText()))
 					volume_cal = re.sub(r'[,-]', '', cells[6].getText())
 					if volume_cal:
 						volume_cal = int(volume_cal)
@@ -49,4 +49,21 @@ def parse_ftse_prices(html, db):
 					index_val = float(re.sub(',', '', index_data))
 					dt = str(datetime.datetime.strptime(dt_text,"%b %d, %Y")).split()[0]
 					db.save_index_prices(("FTSE100",dt, index_val))
+			db.exe_commit()
+
+def parse_currency(html, db, currency):
+	soup = BeautifulSoup(html,'html.parser')
+	tbl_list = soup.find_all("table")
+	for tbl in tbl_list:
+		tbl_id = tbl.get("id")
+		if tbl_id == "curr_table":
+			rows = tbl.find_all("tr")
+			for row in rows:
+				cells = row.find_all("td")
+				if len(cells) == 6:
+					dt_text = cells[0].getText()
+					currency_data = cells[1].getText()
+					currency_val = float(re.sub(',', '', currency_data))
+					dt = str(datetime.datetime.strptime(dt_text,"%b %d, %Y")).split()[0]
+					db.save_currency(currency,(dt, currency_val))
 			db.exe_commit()
