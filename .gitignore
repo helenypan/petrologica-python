@@ -7,3 +7,4 @@ LNG/url_info.py
 LNG/archive/
 .idea/
 cron_tmp
+LNG/get_fleetmon_cron.py
