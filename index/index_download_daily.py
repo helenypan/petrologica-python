@@ -6,7 +6,7 @@ import urllib.request
 import ssl
 import re
 context = ssl._create_unverified_context()
-url_to_complete = "https://uk.finance.yahoo.com/quote/BP/history?interval=1d&filter=history&frequency=1d"
+url_to_complete = "https://uk.finance.yahoo.com/quote/{}/history?interval=1d&filter=history&frequency=1d"
 url_ftse_current = "https://uk.investing.com/indices/uk-100-historical-data"
 url_currency_current = "https://www.investing.com/currencies/eur-nok-historical-data"
 

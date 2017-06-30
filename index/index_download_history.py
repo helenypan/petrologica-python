@@ -102,7 +102,7 @@ for row in db.cur:
 		t1 = get_date_after(t0, month_gap)
 		
 # retrieve ftse 100 data
-extract_ftse_history_data(url_ftse_history)
+# extract_ftse_history_data(url_ftse_history)
 # retrieve eur_nok currency data
-extrace_currency_history_data(url_currency_history, "EUR_NOK")
+# extrace_currency_history_data(url_currency_history, "EUR_NOK")
 db.close_connection()

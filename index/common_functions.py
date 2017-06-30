@@ -24,13 +24,16 @@ def parse_company_prices(company_code, html,db):
 					dt_text = cells[0].getText()
 					dt = str(datetime.datetime.strptime(dt_text,"%d %b %Y")).split()[0]
 					open_val = float( re.sub(r'[,-]', '', cells[1].getText()))
+					high_val = float( re.sub(r'[,-]', '', cells[2].getText()))
+					low_val = float( re.sub(r'[,-]', '', cells[3].getText()))
 					close_val = float( re.sub(r'[,-]', '', cells[4].getText()))
+					adj_close_val = float(re.sub(r'[,-]', '', cells[5].getText()))
 					volume_cal = re.sub(r'[,-]', '', cells[6].getText())
 					if volume_cal:
 						volume_cal = int(volume_cal)
 					else:
 						volume_cal = 0
-					db.save_company_prices((company_code,dt,open_val, close_val,volume_cal))
+					db.save_company_prices((company_code,dt,open_val,high_val,low_val, close_val,adj_close_val,volume_cal))
 			db.exe_commit()
 
 
