@@ -91,7 +91,7 @@ SideBlockUser=a%3A2%3A%7Bs%3A10%3A%22stack_size%22%3Ba%3A1%3A%7Bs%3A11%3A%22last
 
 
 
-db.cur.execute('''select company_code from tomorrow_external_data.index_company; ''')
+db.cur.execute('''select company_code from tomorrow_external_data.index_company WHERE category ="OSEAX"; ''')
 for row in db.cur.fetchall():
 	company_code = row["company_code"]
 	t0 = datetime.datetime(2014, 1, 1)
