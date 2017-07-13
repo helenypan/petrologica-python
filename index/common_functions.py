@@ -33,7 +33,8 @@ def parse_company_prices(company_code, html,db):
 						volume_cal = int(volume_cal)
 					else:
 						volume_cal = 0
-					db.save_company_prices((company_code,dt,open_val,high_val,low_val, close_val,adj_close_val,volume_cal))
+					if adj_close_val>0:
+						db.save_company_prices((company_code,dt,open_val,high_val,low_val, close_val,adj_close_val,volume_cal))
 			db.exe_commit()
 
 

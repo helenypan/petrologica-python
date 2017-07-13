@@ -58,7 +58,7 @@ def extrace_currency_history_data(url, currency):
 	currency_data = {
 		"action":"historical_data",
 		"curr_id":"37",
-		"st_date":"01/01/2010",
+		"st_date":"01/01/2014",
 		"end_date":"05/26/2017",
 		"interval_sec":"Daily"
 	}
@@ -92,9 +92,9 @@ SideBlockUser=a%3A2%3A%7Bs%3A10%3A%22stack_size%22%3Ba%3A1%3A%7Bs%3A11%3A%22last
 
 
 db.cur.execute('''select company_code from tomorrow_external_data.index_company; ''')
-for row in db.cur:
-	company_code = row[0]
-	t0 = datetime.datetime(2010, 1, 1)
+for row in db.cur.fetchall():
+	company_code = row["company_code"]
+	t0 = datetime.datetime(2014, 1, 1)
 	t1 = get_date_after(t0, month_gap)
 	while(t0 < datetime.datetime.now()):
 		extract_company_history_prices(company_code, t0, t1)

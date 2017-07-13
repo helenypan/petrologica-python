@@ -38,8 +38,8 @@ def extract_company_current_prices(company_code):
 
 
 db.cur.execute('''select company_code from tomorrow_external_data.index_company;''')
-for row in db.cur:
-	company_code = row[0]
+for row in db.cur.fetchall():
+	company_code = row["company_code"]
 	extract_company_current_prices(company_code)
 		
 # extract ftse100 data 
